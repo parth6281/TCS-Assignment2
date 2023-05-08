@@ -11,5 +11,9 @@ async function connect() {
     return db
 }
 
+async function disconnect() {
+    await client.close();
+}
 
-module.exports = { connect };
+
+module.exports = { connect, disconnect };

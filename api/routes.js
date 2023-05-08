@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { connect } = require('../db');
+const { connect, disconnect } = require('../db');
 const { API_URL, TIMEOUT } = require('../config');
 
 const getWeather = async (req, res) => {

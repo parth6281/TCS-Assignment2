@@ -8,6 +8,7 @@ const db = require('../db'); // database module
 const sleep = util.promisify(setTimeout); // promisify the setTimeout function
 const cities = ["Toronto", "Windsor", "London"]; // array of cities to test
 const city = "Kitchener".toUpperCase(); // test city name in uppercase
+const badCity = "534".toUpperCase(); // test bad city.
 
 // describe block for testing whether the API returns weather data for a given city
 describe('Testing api to check whether it returns Weather data for a city', () => {
@@ -32,6 +33,22 @@ test('Testing api to check it replies with the error if city is not passed.', as
         expect(err).toEqual({
             status: 400,
             message: "Pass a city name in the query string."
+        });
+    }
+});
+
+// test block for checking whether the API returns an error message if invalid city name passed
+test('Testing api to check it replies with the error if city is not passed.', async () => {
+    try {
+        await axios.get(`${API_URL}?city=${badCity}`) // make an HTTP GET request to the API endpoint without a city name query parameter
+    } catch (error) {
+        err = {
+            status: error.response.status,
+            message: error.response.data.message
+        };
+        expect(err).toEqual({
+            status: 400,
+            message: "Pass a valid City."
         });
     }
 });

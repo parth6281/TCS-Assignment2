@@ -3,9 +3,20 @@ const express = require('express');
 const morgan = require('morgan');
 const fs = require('fs');
 const path = require('path');
+let { API_KEY, API_URL } = require('./config');
+
+API_KEY = process.env.API_KEY || API_KEY;
+
+if (!API_KEY) {
+    console.error("Define an API key.");
+    exit(1);
+}
+
+// Construct API url from API key.
+API_URL = `${API_URL}?key=${API_KEY}&q=`;
 
 // Import the getWeather function from the './api/routes' module
-const { getWeather } = require('./api/routes');
+const { getWeather } = require('./api/routes')(API_URL);
 
 // Set the port number to listen on, using the value of the PORT environment variable if available
 const port = process.env.PORT || 5000;

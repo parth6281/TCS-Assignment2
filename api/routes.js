@@ -1,62 +1,74 @@
 // Importing required dependencies
 const axios = require('axios');
 const { connect } = require('../db');
-const { API_URL, TIMEOUT } = require('../config');
+const { TIMEOUT } = require('../config');
 
-// Defining the function to fetch weather data
-const getWeather = async (req, res) => {
-    let city = req.query.city;
+module.exports = (API_URL) => {
 
-    // Checking if the city parameter is present in the query string
-    if (!city) {
-        res.status(400).json({
-            message: "Pass a city name in the query string."
-        });
-        return;
-    }
+    const isValidCity = (city) => city.match(/^[A-Z]{2}[A-Z]+$/)
 
-    // Removing leading/trailing whitespace and converting the city name to uppercase
-    city = city.trim().toUpperCase();
+    // Defining the function to fetch weather data
+    return {
+        getWeather: async (req, res) => {
+            let city = req.query.city;
 
-    try {
-        // Establishing a connection to the database
-        const db = await connect();
-        const collection = db.collection('weatherdata');
+            // Checking if the city parameter is present in the query string
+            if (!city) {
+                res.status(400).json({
+                    message: "Pass a city name in the query string."
+                });
+                return;
+            }
 
-        // Searching the database for the weather data of the given city
-        const data = await collection.findOne({ city });
+            // Removing leading/trailing whitespace and converting the city name to uppercase
+            city = city.toString().trim().toUpperCase();
 
-        if (data) {
-            // If the data is found in the database, returning it as the response
-            const weather = data.data;
-            res.json(weather);
-        } else {
-            // If the data is not found in the database, fetching it from the external API
-            const url = `${API_URL}${city}`;
-            const response = await axios.get(url);
+            if (!isValidCity(city)) {
+                res.status(400).json({
+                    message: "Pass a valid City."
+                });
+                return;
+            }
 
-            // Sending the response to the client
-            res.status(200).json(response.data);
+            try {
+                // Establishing a connection to the database
+                const db = await connect();
+                const collection = db.collection('weatherdata');
 
-            // Inserting the fetched data into the database for future use
-            collection.insertOne({
-                city,
-                data: response.data
-            }).then(() => {
-                // Deleting the data from the database after a set amount of time (specified by TIMEOUT)
-                setTimeout(() => {
-                    collection.deleteOne({ city });
-                }, TIMEOUT)
-            })
+                // Searching the database for the weather data of the given city
+                const data = await collection.findOne({ city });
+
+                if (data) {
+                    // If the data is found in the database, returning it as the response
+                    const weather = data.data;
+                    res.json(weather);
+                } else {
+                    // If the data is not found in the database, fetching it from the external API
+                    const url = `${API_URL}${city}`;
+                    const response = await axios.get(url);
+
+                    // Sending the response to the client
+                    res.status(200).json(response.data);
+
+                    // Inserting the fetched data into the database for future use
+                    collection.insertOne({
+                        city,
+                        data: response.data
+                    }).then(() => {
+                        // Deleting the data from the database after a set amount of time (specified by TIMEOUT)
+                        setTimeout(() => {
+                            collection.deleteOne({ city });
+                        }, TIMEOUT)
+                    })
+                }
+            } catch (error) {
+                // Handling errors
+                console.error(error)
+                res.status(500).json({
+                    message: "Something went wrong."
+                });
+                return;
+            }
         }
-    } catch (error) {
-        // Handling errors
-        console.error(error)
-        res.status(500).json({
-            message: "Something went wrong."
-        });
-        return;
     }
 }
-
-module.exports = { getWeather };

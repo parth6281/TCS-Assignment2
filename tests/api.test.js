@@ -1,25 +1,29 @@
-const axios = require('axios');
-const API_URL = `http://localhost:5000`
-const { TIMEOUT } = require('../config');
-const util = require('util')
-const db = require('../db');
+// import necessary modules
+const axios = require('axios'); // for making HTTP requests
+const API_URL = `http://localhost:5000` // API endpoint URL
+const { TIMEOUT } = require('../config'); // import timeout value from config
+const util = require('util') // utility module to convert callback based async code to promise based code
+const db = require('../db'); // database module
 
-const sleep = util.promisify(setTimeout);
-const cities = ["Toronto", "Windsor", "London"];
-const city = "Kitchener".toUpperCase();
+const sleep = util.promisify(setTimeout); // promisify the setTimeout function
+const cities = ["Toronto", "Windsor", "London"]; // array of cities to test
+const city = "Kitchener".toUpperCase(); // test city name in uppercase
 
+// describe block for testing whether the API returns weather data for a given city
 describe('Testing api to check whether it returns Weather data for a city', () => {
+    // loop through the array of cities and run the test for each city
     cities.forEach(city => {
         test(`Test API for city: ${city}`, async () => {
-            const response = await axios.get(`${API_URL}?city=${city}`)
-            expect(response.data.location).not.toBeUndefined();
+            const response = await axios.get(`${API_URL}?city=${city}`) // make an HTTP GET request to the API endpoint with the city name as a query parameter
+            expect(response.data.location).not.toBeUndefined(); // expect the response to contain a "location" key with a defined value
         })
     })
 })
 
+// test block for checking whether the API returns an error message if no city is passed
 test('Testing api to check it replies with the error if city is not passed.', async () => {
     try {
-        await axios.get(`${API_URL}`)
+        await axios.get(`${API_URL}`) // make an HTTP GET request to the API endpoint without a city name query parameter
     } catch (error) {
         err = {
             status: error.response.status,
@@ -30,29 +34,29 @@ test('Testing api to check it replies with the error if city is not passed.', as
             message: "Pass a city name in the query string."
         });
     }
-})
+});
 
-test(`Testing api to check whether after ${TIMEOUT / 1000} seconds the city information is deleted from Database`, async () => {
-    try {
-        const collection = (await db.connect()).collection('weatherdata');
-        await collection.deleteOne({ city });
+// test block for checking whether the city information is deleted from the database after a certain amount of time
+test(`Testing api to check whether after ${TIMEOUT / 1000} seconds the city information is deleted from Database`,
+    async () => {
+        try {
+            const collection = (await db.connect()).collection('weatherdata'); // connect to the database and get the collection object
+            await collection.deleteOne({ city }); // delete the document for the test city from the collection
 
-        await axios(`${API_URL}?city=${city}`);
+            await axios(`${API_URL}?city=${city}`); // make an HTTP GET request to the API endpoint with the test city name as a query parameter
 
-        let data = await collection.findOne({ city });
+            let data = await collection.findOne({ city }); // get the document for the test city from the collection
+            expect(data).not.toBeNull(); // expect the document to exist in the collection
 
-        expect(data).not.toBeNull();
+            await sleep(TIMEOUT + 500); // wait for the timeout value plus an additional 500 milliseconds
 
-        await sleep(TIMEOUT + 500);
+            data = await collection.findOne({ city }); // get the document for the test city from the collection
+            expect(data).toBeNull(); // expect the document to not exist in the collection after the timeout period
 
-        data = await collection.findOne({ city });
-        expect(data).toBeNull();
-
-    } catch (error) {
-        console.error(error);
-    } finally {
-        db.disconnect();
+        } catch (error) {
+            console.error(error);
+        } finally {
+            db.disconnect(); // disconnect from the database
+        }
     }
-}, TIMEOUT + 2000);
-
-
+    , TIMEOUT + 2000);
